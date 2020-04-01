@@ -1,0 +1,180 @@
+1=暴露本地服务
+Export dubbo service com.alibaba.dubbo.demo.DemoService to local registry, dubbo version: 2.0.0, current host: 127.0.0.1
+2=暴露远程服务
+Export dubbo service com.alibaba.dubbo.demo.DemoService to url dubbo://192.168.0.103:20880/com.alibaba.dubbo.demo.DemoService?anyhost=true&application=demo-provider&dubbo=2.0.0&generic=false&interface=com.alibaba.dubbo.demo.DemoService&methods=sayHello&pid=45364&side=provider&timestamp=1585752318992, dubbo version: 2.0.0, current host: 127.0.0.1
+Register dubbo service com.alibaba.dubbo.demo.DemoService url dubbo://192.168.0.103:20880/com.alibaba.dubbo.demo.DemoService?anyhost=true&application=demo-provider&dubbo=2.0.0&generic=false&interface=com.alibaba.dubbo.demo.DemoService&methods=sayHello&pid=45364&side=provider&timestamp=1585752318992 to registry registry://122.51.178.224:2181/com.alibaba.dubbo.registry.RegistryService?application=demo-provider&dubbo=2.0.0&pid=45364&registry=zookeeper&timestamp=1585752318890, dubbo version: 2.0.0, current host: 127.0.0.1
+启动netty
+[DUBBO] Start NettyServer bind /0.0.0.0:20880, export /192.168.0.103:20880, dubbo version: 2.0.0, current host: 127.0.0.1
+打开zk
+INFO zookeeper.ClientCnxn: Opening socket connection to server 122.51.178.224/122.51.178.224:2181
+zk注册
+Register: dubbo://192.168.0.103:20880/com.alibaba.dubbo.demo.DemoService?anyhost=true&application=demo-provider&dubbo=2.0.0&generic=false&interface=com.alibaba.dubbo.demo.DemoService&methods=sayHello&pid=45364&side=provider&timestamp=1585752318992, dubbo version: 2.0.0, current host: 127.0.0.1
+监听zk
+Subscribe: provider://192.168.0.103:20880/com.alibaba.dubbo.demo.DemoService?anyhost=true&application=demo-provider&category=configurators&check=false&dubbo=2.0.0&generic=false&interface=com.alibaba.dubbo.demo.DemoService&methods=sayHello&pid=45364&side=provider&timestamp=1585752318992, dubbo version: 2.0.0, current host: 127.0.0.1
+Notify urls for subscribe url provider://192.168.0.103:20880/com.alibaba.dubbo.demo.DemoService?anyhost=true&application=demo-provider&category=configurators&check=false&dubbo=2.0.0&generic=false&interface=com.alibaba.dubbo.demo.DemoService&methods=sayHello&pid=45364&side=provider&timestamp=1585752318992, urls: [empty://192.168.0.103:20880/com.alibaba.dubbo.demo.DemoService?anyhost=true&application=demo-provider&category=configurators&check=false&dubbo=2.0.0&generic=false&interface=com.alibaba.dubbo.demo.DemoService&methods=sayHello&pid=45364&side=provider&timestamp=1585752318992], dubbo version: 2.0.0, current host: 127.0.0.1
+
+暴露本地服务与暴露远程服务的区别是什么？
+1.暴露本地服务指的是暴露在用一个jvm里面  不用调用zk来进行远程通信  没必要进行网络ip来链接通信
+2.暴露远程服务指的是给远程客户端的ip和端口号，通过网络来实现通信。
+
+ProxyFactory:就是为了获取一个接口的代理类
+         getInvoker：针对server端 将服务对象 如DemoServiceImpl包装成一个Invoker对象
+         getProxy：针对client端  创建接口代理对象  例如DemoSerice的接口
+
+Wrapper:它类似spring的beanWrapper它就是包装了一个接口或一个类，可以通过wrapper对实例对象进行赋值取值以及制定方法的调用
+
+Invoker：他是一个可执行的对象  能根据方法的名称 参数得到相应的执行结果
+            Result invoke(Invocation invocation)  Invocation包含了需要执行的方法和参数等重要信息，目前只有实现类 RpcInvocation MockInvocation
+它有三种类型的Invoker
+           1.本地执行类的Invoker
+           2.远程通信类的Invoker
+           3.多个通信执行类的Invoker聚合成集群版的Invoker
+
+protocol
+       1.export 暴露远程服务 用于服务端  就是将proxyFactory.getInvoker创建的代理类 invoker对象 通过协议暴露给外部
+       2.refer 引用远程服务 用于客户端
+
+exporter 维护invoder的生命周期
+
+exchanger 消息交换层 封装请求响应模式 同步转异步
+
+transporter 网络传输层 用来抽象netty和mina的统一接口
+
+
+
+ServiceBean.onApplicationEvent
+-->export()
+   -->ServiceConfig.export()
+     -->doExport()
+       -->doExportUrls()
+         -->loadRegistries(true)//从dubbo的properties里面组装registry的url信息dubbo.registry.address
+           -->doExportUrlsFor1Protocol(ProtocolConfig protocolConfig, List<URL> registryURLs)
+           //配置不是remote的情况下做本地暴露 (配置为remote，则表示只暴露远程服务)
+            -->exportLocal(url)
+             -->proxyFactory.getInvoker(ref, (Class) interfaceClass, local)
+              -->ExtensionLoader.getExtensionLoader(com.alibaba.dubbo.rpc.ProxyFactory.class).getExtension("javassist");
+              -->extension.getInvoker(arg0, arg1, arg2);
+                -->StubProxyFactoryWrapper.getInvoker(T proxy, Class<T> type, URL url)
+                 -->JavassistProxyFactory.getInvoker(T proxy, Class<T> type, URL url)
+                  -->Wrapper.getWrapper(com.alibaba.dubbo.demo.provider.DemoServiceImpl)
+                   -->new AbstractProxyInvoker<T>(proxy, type, url)
+             -->protocol.export(proxyFactory.getInvoker(ref, (Class) interfaceClass, local))
+              -->com.alibaba.dubbo.rpc.Protocol$Adpative.export(com.alibaba.dubbo.rpc.Invoker arg0)
+               -->ExtensionLoader.getExtensionLoader(com.alibaba.dubbo.rpc.Protocol.class).getExtension("injvm");
+                -->ProtocolFilterWrapper.buildInvokerChain(final Invoker<T> invoker, String key, String group)//创建8个filter
+                 -->com.alibaba.dubbo.rpc.protocol.injvm.InjvmProtocol.export(Invoker<T> invoker)
+                  -->return new InjvmExporter<T>(invoker, invoker.getUrl().getServiceKey(), exporterMap);
+                     //主要目的是为了exporterMap.put(key, this); key=com.alibaba.dubbo.demo.DemoService
+                                                                 value=InjvmExport
+             //如果配置不是local则暴露为远程服务.(配置为local，则表示只暴露本地服务)
+            -->proxyFactory.getInvoker(ref, (Class) interfaceClass, registryURL.addParameterAndEncoded(Constants.EXPORT_KEY, url.toFullString()));
+            -->protocol.export(invoker);
+              --> Protocol$Adpative.export(com.alibaba.dubbo.rpc.Invoker arg0)
+               --> ExtensionLoader.getExtensionLoader(com.alibaba.dubbo.rpc.Protocol.class).getExtension("registry");
+                -->com.alibaba.dubbo.rpc.protocol.ProtocolFilterWrapper.export(Invoker<T> invoker)
+                 -->com.alibaba.dubbo.rpc.protocol.ProtocolListenerWrapper.export(Invoker<T> invoker)
+                  -->com.alibaba.dubbo.registry.integration.RegistryProtocol.export(Invoker<T> invoker)
+                   -->doLocalExport(originInvoker);
+                    -->protocol.export(invokerDelegete)
+                     -->Protocol$Adpative.export(com.alibaba.dubbo.rpc.Invoker arg0)
+                      --> ExtensionLoader.getExtensionLoader(com.alibaba.dubbo.rpc.Protocol.class).getExtension("dubbo");
+                       -->ProtocolFilterWrapper.buildInvokerChain(final Invoker<T> invoker, String key, String group)//创建8个filter
+  netty服务暴露          -->com.alibaba.dubbo.rpc.protocol.dubbo.DubboProtocol.export(Invoker<T> invoker)
+                         -->serviceKey(url) 组装key com.alibaba.dubbo.demo.DemoService:20880
+                          --> new DubboExporter<T>(invoker, invoker.getUrl().getServiceKey(), exporterMap);
+                          //主要目的是为了exporterMap.put(key, this); key=com.alibaba.dubbo.demo.DemoService:20880
+                                                                                           value=DubboExporter
+                           -->exporterMap.put(key, exporter);
+                            -->openServer(url);
+                             -->createServer(URL url)
+   信息交换层exchanger        -->Exchangers.bind(url, requestHandler);信息交换层
+                               -->getExchanger(url)
+                                -->getExchanger(type)
+                                 --> ExtensionLoader.getExtensionLoader(Exchanger.class).getExtension("header");
+                               -->bind(URL url, ExchangeHandler handler)
+                                -->new HeaderExchangeServer(Transporters.bind(url, new DecodeHandler(new HeaderExchangeHandler(handler))));
+    网络传输层transporter         -->Transporters.bind(url, new DecodeHandler(new HeaderExchangeHandler(handler)));
+                                  -->new HeaderExchangeHandler(handler)
+                                   -->getTransporter()
+                                    -->return ExtensionLoader.getExtensionLoader(Transporter.class).getAdaptiveExtension();
+                                     -->com.alibaba.dubbo.remoting.Transporter$Adpative.bind(com.alibaba.dubbo.common.URL arg0, com.alibaba.dubbo.remoting.ChannelHandler arg1)
+                                      -->ExtensionLoader.getExtensionLoader(com.alibaba.dubbo.remoting.Transporter.class).getExtension("netty");
+                                       -->com.alibaba.dubbo.remoting.transport.netty.NettyTransporter.bind(URL url, ChannelHandler listener)
+                                        -->return new NettyServer(url, listener);
+                                         -->com.alibaba.dubbo.remoting.transport.AbstractPeer.AbstractPeer(URL url, ChannelHandler handler)
+                                            // this.url = url;dubbo://192.168.0.103:20880/com.alibaba.dubbo.demo.DemoService?anyhost=true&application=
+                                            demo-provider&channel.readonly.sent=true&codec=dubbo&dubbo=2.0.0&generic=false&
+                                               heartbeat=60000&interface=com.alibaba.dubbo.demo.DemoService&methods=sayHello&pid=26312&side=provider&timestamp=1585761665990
+                                            this.handler = handler;
+                                          -->com.alibaba.dubbo.remoting.transport.AbstractEndpoint.AbstractEndpoint
+                                            // timeout=1000
+                                            // connectTime=3000
+                                          -->com.alibaba.dubbo.remoting.transport.AbstractServer.AbstractServer
+                                             //bindAddress accepts-0 idleTimeout=600000
+     打开端口 暴露netty服务                 -->doOpen();
+                                             //设置NioServerSocketChannelFactory
+                                             -->bootstrap.bind(getBindAddress());
+                                -->HeaderExchangeServer(Server server)
+                                         this.server = nettyServer;
+                                         this.heartbeat = 60000
+                                         this.heartbeatTimeout=180000
+                                  -->startHeatbeatTimer();//心跳定时器  采用了线程池  如果断开就重连
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
