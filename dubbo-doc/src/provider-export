@@ -119,6 +119,64 @@ ServiceBean.onApplicationEvent
                                          this.heartbeat = 60000
                                          this.heartbeatTimeout=180000
                                   -->startHeatbeatTimer();//心跳定时器  采用了线程池  如果断开就重连
+                   -- getRegistry(originInvoker);//zk的链接
+                    --registryFactory.getRegistry(registryUrl);
+                     --com.alibaba.dubbo.registry.RegistryFactory$Adpative.getRegistry(com.alibaba.dubbo.common.URL arg0)
+                      --ExtensionLoader.getExtensionLoader(com.alibaba.dubbo.registry.RegistryFactory.class).getExtension("zookeeper");
+                       --extension.getRegistry(arg0);
+                        --AbstractRegistryFactory.getRegistry(URL url)//创建一个注册中心
+                         -->createRegistry(url);
+                          -->ZookeeperRegistryFactory.createRegistry(URL url)
+                           -->new ZookeeperRegistry(url, zookeeperTransporter);
+                            -->AbstractRegistry.loadProperties();
+                            //加载C:\Users\何锡祥\.dubbo\dubbo-registry-122.51.178.224.cache文件中的内容为properties
+                             -->FailbackRegistry(URL url)
+                              -->this.retryFuture = retryExecutor.scheduleWithFixedDelay(new Runnable() {})//// 检测并连接注册中心
+                          --> ZookeeperRegistry(URL url, ZookeeperTransporter zookeeperTransporter)
+                           --> zookeeperTransporter.connect(url)
+                            -->com.alibaba.dubbo.remoting.zookeeper.ZookeeperTransporter$Adpative.connect(com.alibaba.dubbo.common.URL arg0)
+                             -->ExtensionLoader.getExtensionLoader(com.alibaba.dubbo.remoting.zookeeper.ZookeeperTransporter.class).getExtension("zkclient");
+                              -->extension.connect(arg0);
+                               -->return new ZkclientZookeeperClient(url);
+                                -->new ZkClient(url.getBackupAddress());//链接zk
+                                --> client.subscribeStateChanges(new IZkStateListener() {}//订阅目标 连接断开 重连
+                           --> zkClient.addStateListener(new StateListener()
+                            -->recover();连接失败 重连
+                   -->registry.register(registedProviderUrl);
+                    -->FailbackRegistry.register(URL url)
+                     -->doRegister(url);// // 向zk服务器端发送注册请求
+                      -->ZookeeperRegistry.doRegister(URL url)
+                       -->zkClient.create(toUrlPath(url), url.getParameter(Constants.DYNAMIC_KEY, true));
+                        -->AbstractZookeeperClient.create(/dubbo/com.alibaba.dubbo.demo.DemoService
+                        /providers/dubbo%3A%2F%2F192.168.0.103%3A20880%2Fcom.alibaba.dubbo.demo.DemoService%3Fanyhost%3D
+                        true%26application%3Ddemo-provider%26dubbo%3D2.0.0%26generic%3Dfalse%26interface%3D
+                        com.alibaba.dubbo.demo.DemoService%26methods%3DsayHello%26pid%3D5932%26side%3Dprovider%26
+                        timestamp%3D1585846605592
+                        )
+                          -->  createEphemeral(path);//创建临时节点dubbo%3A%2F%2F192.168.0.103%3A20880%2Fcom.alibaba.dubbo.demo.DemoService%3Fanyhost%3D
+                                                                                     true%26application%3Ddemo-provider%26dubbo%3D2.0.0%26generic%3Dfalse%26interface%3D
+                                                                                     com.alibaba.dubbo.demo.DemoService%26methods%3DsayHello%26pid%3D5932%26side%3Dprovider%26
+                                                                                     timestamp%3D1585846605592
+                          -->  createPersistent(path);//持久化节点 /dubbo/com.alibaba.dubbo.demo.DemoService/providers
+                   -->registry.subscribe(overrideSubscribeUrl, overrideSubscribeListener);
+                    -->FailbackRegistry.subscribe(URL url, NotifyListener listener)
+                     --> doSubscribe(url, listener);// 向服务器端发送订阅请求
+                      -->ZookeeperRegistry.doSubscribe
+                       -->zkClient.create(path, false);//创建持久化节点 /dubbo/com.alibaba.dubbo.demo.DemoService/configurators
+                       -->zkClient.addChildListener(path, zkListener);//加入监听
+                        -->
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
