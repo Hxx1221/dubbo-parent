@@ -1,0 +1,33 @@
+-->NettyHandler.messageReceived
+ -->AbstractPeer.received
+  -->MultiMessageHandler.received
+   -->HeartbeatHandler.received
+    -->handler.received(channel, message);
+     -->AllChannelHandler.received
+      -->ChannelEventRunnable.run  //采用线程池
+       -->handler.received(channel, message);
+        -->DecodeHandler.received
+         -->handler.received(channel, message);
+          -->HeaderExchangeHandler.received
+           -->Response response = handleRequest(exchangeChannel, request); 网络通信接受处理
+            -->handler.reply(channel, msg);
+             -->DubboProtocol.reply
+----------------------------------------------扩展点-------------------------------------------
+              -->ProtocolFilterWrapper.invoke
+               -->EchoFilter.invoke
+                -->ClassLoaderFilter.invoke
+                 -->GenericFilter.invoke
+                  -->ContextFilter.invoke
+                   -->TraceFilter.invoke
+                    -->TimeoutFilter.invoke
+                     -->MonitorFilter.invoke
+                      -->ExceptionFilter.invoke
+                       -->InvokerWrapper.invoke
+--------------------------------------------------------------------------------------------
+                        -->AbstractProxyInvoker.invoke
+                         -->JavassistProxyFactory.AbstractProxyInvoker.doInvoke
+                          -->j进入真正执行的实现类中
+           -->channel.send(response);
+            -->NettyChannel.send
+             -->ChannelFuture future = channel.write(message);//数据返回给consumer
+              -->

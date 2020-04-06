@@ -75,11 +75,11 @@ public class MockClusterInvoker<T> implements Invoker<T> {
                 logger.info("force-mock: " + invocation.getMethodName() + " force-mock enabled , url : " + directory.getUrl());
             }
             //force:direct mock
-            result = doMockInvoke(invocation, null);
+            result = doMockInvoke(invocation, null);//屏蔽
         } else {
             //fail-mock
             try {
-                result = this.invoker.invoke(invocation);
+                result = this.invoker.invoke(invocation);//容错
             } catch (RpcException e) {
                 if (e.isBiz()) {
                     throw e;

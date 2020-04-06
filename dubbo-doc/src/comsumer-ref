@@ -1,0 +1,59 @@
+-->ReferenceBean.getObject
+ -->get();
+  -->ReferenceConfig.get
+   -->init();
+    -->createProxy(map);
+     -->refprotocol.refer(interfaceClass, urls.get(0));
+      -->com.alibaba.dubbo.rpc.Protocol$Adpative.refer
+       -->ExtensionLoader.getExtensionLoader(com.alibaba.dubbo.rpc.Protocol.class).getExtension("registry");
+        -->extension.refer(arg0, arg1);
+         -->com.alibaba.dubbo.rpc.protocol.ProtocolListenerWrapper.refer(Class<T> type, URL url)
+          -->RegistryProtocol.refer(Class<T> type, URL url)
+           -->registryFactory.getRegistry(url);//建立zk的链接  和服务端发布一样
+           -->doRefer(cluster, registry, type, url);
+            --> registry.register(subscribeUrl.addParameters(Constants.CATEGORY_KEY, Constants.CONSUMERS_CATEGORY,
+                                   Constants.CHECK_KEY, String.valueOf(false)));
+            //创建zk的节点  和服务端发布的一样  节点名 dubbo/com.alibaba.dubbo.demo.DemoService/consumers
+            --> directory.subscribe 订阅 // /dubbo/com.alibaba.dubbo.demo.DemoService/providers,
+                                     /dubbo/com.alibaba.dubbo.demo.DemoService/configurators,
+                                    /dubbo/com.alibaba.dubbo.demo.DemoService/routers
+              -->notify(url, listener, urls)
+               -->com.alibaba.dubbo.registry.support.FailbackRegistry.notify
+                -->doNotify(url, listener, urls);
+                 --> super.notify(url, listener, urls);
+                  -->AbstractRegistry.notify
+                   -->saveProperties(url);//把服务端的注册地址信息更新到C:\Users\何锡祥\.dubbo\dubbo-registry-122.51.178.224.cache
+                   -->listener.notify(categoryList);
+                    -->RegistryDirectory.notify
+                     -->refreshInvoker(invokerUrls);//刷新缓存中的Invoker列表
+                      -->RegistryDirectory.refreshInvoker
+                       -->destroyUnusedInvokers(oldUrlInvokerMap, newUrlInvokerMap); // 关闭未使用的Invoker
+                       //目的 刷新 methodInvokerMap
+            -->cluster.join(directory);//加入集群路由
+             -->Cluster$Adpative.join
+              -->ExtensionLoader.getExtensionLoader(com.alibaba.dubbo.rpc.cluster.Cluster.class).getExtension("failover");
+               -->extension.join(arg0);
+                -->com.alibaba.dubbo.rpc.cluster.support.wrapper.MockClusterWrapper.join
+                 -->new MockClusterInvoker<T>(directory,this.cluster.join(directory));
+                  -->com.alibaba.dubbo.rpc.cluster.support.FailoverCluster.join
+                   -->new FailoverClusterInvoker<T>(directory);
+     -->return (T) proxyFactory.getProxy(invoker);//创建动态代理
+      -->ProxyFactory$Adpative.getProxy
+       -->ExtensionLoader.getExtensionLoader(com.alibaba.dubbo.rpc.ProxyFactory.class).getExtension("javassist");
+        -->extension.getProxy(arg0);
+         -->StubProxyFactoryWrapper.getProxy
+          -->T proxy = proxyFactory.getProxy(invoker);
+           -->AbstractProxyFactory.getProxy(com.alibaba.dubbo.rpc.Invoker<T>)
+            -->return getProxy(invoker, interfaces);
+             -->JavassistProxyFactory.getProxy
+              -->Proxy.getProxy(interfaces).newInstance(new InvokerInvocationHandler(invoker));
+              //interface com.alibaba.dubbo.demo.DemoService
+              //interface com.alibaba.dubbo.rpc.service.EchoService
+              //invoker==采用jdk自带的InvocationHandler
+
+
+
+
+
+
+

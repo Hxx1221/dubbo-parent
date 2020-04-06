@@ -32,7 +32,8 @@ Invoker：他是一个可执行的对象  能根据方法的名称 参数得到�
 
 protocol
        1.export 暴露远程服务 用于服务端  就是将proxyFactory.getInvoker创建的代理类 invoker对象 通过协议暴露给外部
-       2.refer 引用远程服务 用于客户端
+       2.refer 引用远程服务 用于客户端 通过proxyFactory.getProxy来创建远程的动态代理类 例如创建DemoService的远程接口
+
 
 exporter 维护invoder的生命周期
 
@@ -162,9 +163,35 @@ ServiceBean.onApplicationEvent
                     -->FailbackRegistry.subscribe(URL url, NotifyListener listener)
                      --> doSubscribe(url, listener);// 向服务器端发送订阅请求
                       -->ZookeeperRegistry.doSubscribe
-                       -->zkClient.create(path, false);//创建持久化节点 /dubbo/com.alibaba.dubbo.demo.DemoService/configurators
+                       -->zkClient.create(path, false);////// 第一步：创建持久化节点 /dubbo/com.alibaba.dubbo.demo.DemoService/configurators
                        -->zkClient.addChildListener(path, zkListener);//加入监听
-                        -->
+                        -->AbstractZookeeperClient.addChildListener(String path, final ChildListener listener)
+                         -->createTargetChildListener(path, listener)//////第三步：收到订阅后的处理  交给FailbackRegistry.notify处理
+                          -->ZkclientZookeeperClient.createTargetChildListener(String path, final ChildListener listener)
+                           -->new IZkChildListener()
+                            -->实现了handleChildChange  //收到订阅后的处理
+                             -->listener.childChanged(parentPath, currentChilds);
+                                parentPath:/dubbo/com.alibaba.dubbo.demo.DemoService/configurators
+                             -->实现并执行ZookeeperRegistry.this.notify(url, listener, toUrlsWithEmpty(url, parentPath, currentChilds));
+                             -->收到订阅后的处理com.alibaba.dubbo.registry.support.FailbackRegistry.notify
+                         --> addTargetChildListener(path, targetListener)////////////第二步：
+                          -->ZkclientZookeeperClient.addTargetChildListener(String path, final IZkChildListener listener)
+                           -->client.subscribeChildChanges(path, listener);//启动加入订阅/dubbo/com.alibaba.dubbo.demo.DemoService/configurators
+                    -->notify(url, listener, urls);
+                     -->com.alibaba.dubbo.registry.support.FailbackRegistry.notify
+                      -->doNotify(url, listener, urls);
+                       -->com.alibaba.dubbo.registry.support.FailbackRegistry.doNotify
+                        -->super.notify(url, listener, urls);
+                         -->AbstractRegistry.notify(URL url, NotifyListener listener, List<URL> urls)
+                          -->saveProperties(url);//把服务端的注册信息更新到C:\Users\何锡祥\.dubbo\dubbo-registry-122.51.178.224.cache
+                           -->registryCacheExecutor.execute(new SaveProperties(version));采用线程池的方式
+                         -->listener.notify(categoryList);
+                          -->OverrideListener.notify
+                           -->RegistryProtocol.this.getProviderUrl(originInvoker);//通过invoker的url 获取 providerUrl的地址
+
+
+
+
 
 
 
